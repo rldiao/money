@@ -23,5 +23,13 @@ def add_account(name: str):
     click.echo(f"Created account: {account.name}")
 
 
+@cli.command()
+@click.argument("name")
+def get_account(name: str):
+    with SessionLocal() as db:
+        account = crud.account.get(db, name)
+    click.echo(f"Account:\n\tname:\t{account.name}\n\tbudget:\t{account.budget}\n")
+
+
 if __name__ == "__main__":
     cli()
