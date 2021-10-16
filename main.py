@@ -3,7 +3,9 @@ from sqlalchemy.exc import IntegrityError
 
 from money import crud
 from money.db.session import SessionLocal
+from money.models import category
 from money.models.entry import EntryType
+from money.money import add_double_entry_transaction
 
 
 @click.group()
@@ -32,19 +34,22 @@ def get_account(name: str):
 
 
 @cli.command()
+@click.argument("name")
+def add_category(name: str):
+    with SessionLocal() as db:
+        category = crud.category.create(db, name)
+        click.echo(f"Created category: {category.name}")
+
+
+@cli.command()
 @click.argument("from_acc")
 @click.argument("to_acc")
+@click.argument("category")
 @click.argument("amount", type=click.FLOAT)
-def add_transaction(from_acc: str, to_acc: str, amount: float):
+def add_transaction(from_acc: str, to_acc: str, category: str, amount: float):
     with SessionLocal() as db:
-        from_acc_obj = crud.account.get(db, from_acc)
-        to_acc_obj = crud.account.get(db, to_acc)
-        transaction = crud.transaction.create(db, amount)
-        crud.entry.create(db, from_acc_obj, transaction, EntryType.DEBIT)
-        crud.entry.create(db, to_acc_obj, transaction, EntryType.CREDIT)
-        click.echo(
-            f"{from_acc} -> {to_acc} | amount={amount} | {transaction.transaction_date}"
-        )
+        add_double_entry_transaction(db, from_acc, to_acc, category, amount)
+        click.echo(f"{from_acc} -> {to_acc} | amount={amount}")
 
 
 @cli.command()

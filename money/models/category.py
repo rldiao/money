@@ -7,4 +7,5 @@ from sqlalchemy.sql.sqltypes import Integer, String
 class Category(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
-    transaction = relationship("Transaction", back_populates="category")
+
+    transactions = relationship("Transaction", back_populates="category")
