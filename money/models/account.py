@@ -9,7 +9,7 @@ from ..db.base_class import Base
 class Account(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=true)
-    budget = Column(Float)
+    budget = Column(Float, nullable=True)
 
     transactions = relationship(
         "Transaction", cascade="all, delete-orphan", back_populates="account"
