@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 8945a3242d52
+Revision ID: 61d628b36d1e
 Revises: 
-Create Date: 2021-10-16 17:18:24.024184
+Create Date: 2021-10-16 18:03:59.326581
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "8945a3242d52"
+revision = "61d628b36d1e"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -29,24 +29,26 @@ def upgrade():
     op.create_table(
         "transaction",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("account_id", sa.Integer(), nullable=False),
         sa.Column("transaction_date", sa.Date(), nullable=False),
         sa.Column("amount", sa.Float(), nullable=False),
         sa.Column("memo", sa.String(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["account_id"], ["account.id"], ondelete="CASCADE"
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "entry",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("account_id", sa.Integer(), nullable=False),
         sa.Column("transaction_id", sa.Integer(), nullable=False),
         sa.Column(
             "type", sa.Enum("credit", "debit", name="entrytype"), nullable=True
         ),
         sa.ForeignKeyConstraint(
-            ["transaction_id"], ["transaction.id"], ondelete="CASCADE"
+            ["account_id"],
+            ["account.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["transaction_id"],
+            ["transaction.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )

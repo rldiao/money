@@ -14,9 +14,9 @@ class EntryType(enum.Enum):
 
 class Entry(Base):
     id = Column(Integer, primary_key=True)
-    transaction_id = Column(
-        Integer, ForeignKey("transaction.id", ondelete="CASCADE"), nullable=False
-    )
+    account_id = Column(Integer, ForeignKey("account.id"), nullable=False)
+    transaction_id = Column(Integer, ForeignKey("transaction.id"), nullable=False)
     type = Column(Enum(EntryType))
 
     transaction = relationship("Transaction", back_populates="entries")
+    account = relationship("Account", back_populates="entries")

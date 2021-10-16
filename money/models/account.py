@@ -11,6 +11,6 @@ class Account(Base):
     name = Column(String, nullable=False, unique=true)
     budget = Column(Float, nullable=True)
 
-    transactions = relationship(
-        "Transaction", cascade="all, delete-orphan", back_populates="account"
+    entries = relationship(
+        "Entry", cascade="all, delete-orphan", back_populates="account"
     )
