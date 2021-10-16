@@ -1,0 +1,1 @@
+# Create bin script to run money/main.py
