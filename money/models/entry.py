@@ -8,8 +8,8 @@ from ..db.base_class import Base
 
 
 class EntryType(enum.Enum):
-    credit = "C"
-    debit = "D"
+    CREDIT = enum.auto()
+    DEBIT = enum.auto()
 
 
 class Entry(Base):
