@@ -42,7 +42,14 @@ def add_transaction(sender: str, reciever: str, amount: float):
 @cli.command()
 @click.argument("mode", type=click.Choice(["westpac"]))
 @click.argument("csvfile", type=click.File())
-def load_csv(mode: str, csvfile: File):
+@click.option("--create-account", is_flag=True)
+def load_csv(mode: str, csvfile: File, create_account):
     click.echo("Loading transactions from csv...")
     if mode == "westpac":
-        controller.load_transactions(csvfile, WestpacParser())
+        click.echo(
+            controller.load_transactions(
+                csvfile,
+                WestpacParser(),
+                create_account=create_account,
+            )
+        )

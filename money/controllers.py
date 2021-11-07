@@ -50,21 +50,22 @@ class MoneyController:
         amount: float,
         memo: str = None,
         transaction_date: date = None,
+        create_account=False,
     ) -> str:
-        """Create double entry transaction
-
-        Args:
-            sender_name (str): Sender account name
-            reciever_name (str): Reciever account name
-            amount (float): Amount transacted
-
-        Returns:
-            str: Message
-        """
         sender = self.account_repo.get_by_name(sender_name)
         reciever = self.account_repo.get_by_name(reciever_name)
-        if not sender or not reciever:
-            return "Error creating transaction."
+
+        if not sender and create_account:
+            sender = self.account_repo.insert(Account(name=sender_name))
+        if not reciever and create_account:
+            reciever_name = self.account_repo.insert(Account(name=reciever_name))
+
+        err_message = "Error creating transaction due to no account named {}."
+        if not sender:
+            return err_message.format(sender_name)
+        if not reciever:
+            return err_message.format(reciever_name)
+
         transaction = repos.transaction.insert(
             Transaction(transaction_date=transaction_date, memo=memo)
         )
@@ -88,12 +89,22 @@ class MoneyController:
             f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
         )
 
-    def load_transactions(self, csvfile, parser: TransactionParser):
+    def load_transactions(
+        self,
+        csvfile,
+        parser: TransactionParser,
+        create_account: bool,
+    ):
+        resp = list()
         for transaction in parser.parse(csvfile):
-            self.create_transaction(
-                sender_name=transaction.sender,
-                reciever_name=transaction.receiver,
-                amount=float(transaction.amount),
-                memo=transaction.memo,
-                transaction_date=transaction.transaction_date,
+            resp.append(
+                self.create_transaction(
+                    sender_name=transaction.sender,
+                    reciever_name=transaction.receiver,
+                    amount=float(transaction.amount),
+                    memo=transaction.memo,
+                    transaction_date=transaction.transaction_date,
+                    create_account=create_account,
+                )
             )
+        return "\n".join(resp)
