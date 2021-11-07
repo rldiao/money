@@ -19,13 +19,6 @@ class Account(Base):
     )
 
 
-class Category(Base):
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False, unique=True)
-
-    transactions = relationship("Transaction", back_populates="category")
-
-
 class EntryType(enum.Enum):
     CREDIT = enum.auto()
     DEBIT = enum.auto()
@@ -36,6 +29,7 @@ class Entry(Base):
     account_id = Column(Integer, ForeignKey("account.id"), nullable=False)
     transaction_id = Column(Integer, ForeignKey("transaction.id"), nullable=False)
     type = Column(Enum(EntryType))
+    amount = Column(Float, nullable=False)
 
     transaction = relationship("Transaction", back_populates="entries")
     account = relationship("Account", back_populates="entries")
@@ -43,10 +37,7 @@ class Entry(Base):
 
 class Transaction(Base):
     id = Column(Integer, primary_key=True)
-    category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
     transaction_date = Column(Date, nullable=False, default=func.now())
-    amount = Column(Float, nullable=False)
     memo = Column(String, nullable=True)
 
-    category = relationship("Category", back_populates="transactions")
     entries = relationship("Entry", back_populates="transaction")

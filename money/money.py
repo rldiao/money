@@ -1,20 +1,33 @@
 from sqlalchemy.orm.session import Session
 
-from money.db.session import SessionLocal
-from money.models import category
+from money import repos
 
-from . import crud
-from .models.entry import EntryType
+from .models import Account, Entry, EntryType, Transaction
 
 
 def add_double_entry_transaction(
-    db: Session, from_acc_name: str, to_acc_name: str, category_name: str, amount: float
-):
-    from_acc = crud.account.get(db, from_acc_name)
-    to_acc = crud.account.get(db, to_acc_name)
-    category = crud.category.get(db, category_name)
-    if not category:
-        raise Exception(f"Cannot find category '{category_name}'")
-    transaction = crud.transaction.create(db, amount, category)
-    crud.entry.create(db, from_acc, transaction, EntryType.DEBIT)
-    crud.entry.create(db, to_acc, transaction, EntryType.CREDIT)
+    db: Session,
+    sender: Account,
+    reciever: Account,
+    amount: float,
+) -> None:
+    transaction = Transaction()
+    repos.transaction.insert(db, transaction)
+    repos.entry.insert(
+        db,
+        Entry(
+            account=sender,
+            transaction=transaction,
+            type=EntryType.DEBIT,
+            amount=amount,
+        ),
+    )
+    repos.entry.insert(
+        db,
+        Entry(
+            account=reciever,
+            transaction=transaction,
+            type=EntryType.CREDIT,
+            amount=amount,
+        ),
+    )
