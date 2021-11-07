@@ -18,17 +18,13 @@ def cli():
 @cli.command()
 @click.argument("name")
 def add_account(name: str):
-    try:
-        controller.create_account(name)
-    except IntegrityError as e:
-        click.echo(f"Failed to create account because of:\n{e}")
+    click.echo(controller.create_account(name))
 
 
 @cli.command()
 @click.argument("name")
 def get_account(name: str):
-    account = controller.get_account(name)
-    click.echo(f"Account:\n\tname:\t{account.name}\n\tbudget:\t{account.budget}\n")
+    click.echo(controller.get_account(name))
 
 
 @cli.command()
@@ -36,8 +32,7 @@ def get_account(name: str):
 @click.argument("reciever")
 @click.argument("amount", type=click.FLOAT)
 def add_transaction(sender: str, reciever: str, amount: float):
-    controller.create_transaction(sender, reciever, amount)
-    click.echo(f"{sender} -> {reciever} | amount={amount}")
+    click.echo(controller.create_transaction(sender, reciever, amount))
 
 
 @cli.command()
