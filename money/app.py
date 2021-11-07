@@ -5,9 +5,8 @@ from click.types import File
 from sqlalchemy.exc import IntegrityError
 
 from money.controllers import MoneyController
-from money.repos import account, entry, transaction
 
-controller = MoneyController(account, transaction, entry)
+controller = MoneyController()
 
 
 @click.group()

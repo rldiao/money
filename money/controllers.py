@@ -1,20 +1,15 @@
 from sqlalchemy.exc import IntegrityError
 from money import repos
 
-from .repos import AccountRepo, EntryRepo, TransactionRepo
+from . import repos
 from .models import Account, Entry, EntryType, Transaction
 
 
 class MoneyController:
-    def __init__(
-        self,
-        account_repo: AccountRepo,
-        transaction_repo: TransactionRepo,
-        entry_repo: EntryRepo,
-    ) -> None:
-        self.account_repo = account_repo
-        self.transaction_repo = transaction_repo
-        self.entry_repo = entry_repo
+    def __init__(self) -> None:
+        self.account_repo = repos.account
+        self.transaction_repo = repos.transaction
+        self.entry_repo = repos.entry
 
     def create_account(self, name: str) -> str:
         """Create account
@@ -80,4 +75,6 @@ class MoneyController:
                 amount=amount,
             ),
         )
-        return f"Added ${amount:.2f} from {sender.upper()} to {reciever.upper()}"
+        return (
+            f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
+        )
