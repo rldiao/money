@@ -1,10 +1,9 @@
-import csv
-
 import click
 from click.types import File
-from sqlalchemy.exc import IntegrityError
+from money.constant import UNCATEGORIZED_ACCOUNT
 
 from money.controllers import MoneyController
+from money.westpac import WestpacParser
 
 controller = MoneyController()
 
@@ -12,6 +11,12 @@ controller = MoneyController()
 @click.group()
 def cli():
     pass
+
+
+@cli.command()
+def init():
+    """Initialize default application data"""
+    controller.create_account(UNCATEGORIZED_ACCOUNT)
 
 
 @cli.command()
@@ -39,20 +44,5 @@ def add_transaction(sender: str, reciever: str, amount: float):
 @click.argument("csvfile", type=click.File())
 def load_csv(mode: str, csvfile: File):
     click.echo("Loading transactions from csv...")
-    reader = csv.DictReader(csvfile)
     if mode == "westpac":
-        try:
-            controller.create_account("westpac-pay")
-            controller.create_account("uncategorized")
-        except IntegrityError:
-            pass
-        for row in reader:
-            credit = row["Credit Amount"]
-            debit = row["Debit Amount"]
-            print("Credit:", credit, "Debit:", debit)
-            if debit:
-                controller.create_transaction(
-                    sender_name="westpac-pay",
-                    reciever_name="uncategorized",
-                    amount=debit,
-                )
+        controller.load_transactions(csvfile, WestpacParser())

@@ -1,5 +1,10 @@
+import csv
+from datetime import date
+
 from sqlalchemy.exc import IntegrityError
 from money import repos
+from money.constant import UNCATEGORIZED_ACCOUNT
+from money.parser import TransactionParser
 
 from . import repos
 from .models import Account, Entry, EntryType, Transaction
@@ -43,6 +48,8 @@ class MoneyController:
         sender_name: str,
         reciever_name: str,
         amount: float,
+        memo: str = None,
+        transaction_date: date = None,
     ) -> str:
         """Create double entry transaction
 
@@ -58,7 +65,9 @@ class MoneyController:
         reciever = self.account_repo.get_by_name(reciever_name)
         if not sender or not reciever:
             return "Error creating transaction."
-        transaction = repos.transaction.insert(Transaction())
+        transaction = repos.transaction.insert(
+            Transaction(transaction_date=transaction_date, memo=memo)
+        )
         self.entry_repo.insert(
             Entry(
                 account=sender,
@@ -78,3 +87,13 @@ class MoneyController:
         return (
             f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
         )
+
+    def load_transactions(self, csvfile, parser: TransactionParser):
+        for transaction in parser.parse(csvfile):
+            self.create_transaction(
+                sender_name=transaction.sender,
+                reciever_name=transaction.receiver,
+                amount=float(transaction.amount),
+                memo=transaction.memo,
+                transaction_date=transaction.transaction_date,
+            )
