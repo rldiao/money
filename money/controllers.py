@@ -1,6 +1,4 @@
 from typing import Optional
-import click
-from sqlalchemy.orm.session import Session
 
 from money import repos
 
