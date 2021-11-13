@@ -1,55 +1,118 @@
-import click
-from click.types import File
-from money.constant import UNCATEGORIZED_ACCOUNT
+from datetime import date
 
-from money.controllers import MoneyController
-from money.westpac import WestpacParser
+from sqlalchemy.exc import IntegrityError
+from money import repos
+from money.db.session import SessionLocal
+from money.parser import TransactionParser
 
-controller = MoneyController()
-
-
-@click.group()
-def cli():
-    pass
+from . import repos
+from .models import Account, Entry, EntryType, Transaction
 
 
-@cli.command()
-def init():
-    """Initialize default application data"""
-    controller.create_account(UNCATEGORIZED_ACCOUNT)
+class MoneyApp:
+    def __init__(self) -> None:
+        self.account_repo = repos.account
+        self.transaction_repo = repos.transaction
+        self.entry_repo = repos.entry
+        self.session_factory = SessionLocal
 
+    def create_account(self, name: str) -> str:
+        """Create account
 
-@cli.command()
-@click.argument("name")
-def add_account(name: str):
-    click.echo(controller.create_account(name))
+        Args:
+            name (str): Account name
 
+        Returns:
+            str: Message
+        """
+        try:
+            with self.session_factory() as db:
+                account = repos.account.insert(db, Account(name=name))
+                return f"Created account: {account.name}"
+        except IntegrityError:
+            return f"Failed to create account: {name}"
 
-@cli.command()
-@click.argument("name")
-def get_account(name: str):
-    click.echo(controller.get_account(name))
+    def get_account(self, name: str) -> str:
+        """Get account
 
+        Args:
+            name (str): Account name
 
-@cli.command()
-@click.argument("sender")
-@click.argument("reciever")
-@click.argument("amount", type=click.FLOAT)
-def add_transaction(sender: str, reciever: str, amount: float):
-    click.echo(controller.create_transaction(sender, reciever, amount))
+        Returns:
+            str: Message
+        """
+        with self.session_factory() as db:
+            account = self.account_repo.get_by_name(db, name)
+            return f"Account:\n\tname:\t{account.name}\n\tbudget:\t{account.budget}\n"
 
+    def create_transaction(
+        self,
+        amount: float,
+        sender_name: str = None,
+        reciever_name: str = None,
+        memo: str = None,
+        transaction_date: date = None,
+        create_account: bool = False,
+    ) -> str:
+        # TODO: remove adding both entries on creating transaction with no know sender/reciever
+        with self.session_factory() as db:
+            sender = None
+            if sender_name:
+                sender = self.account_repo.get_by_name(db, sender_name)
+            elif sender_name and create_account:
+                sender = self.account_repo.get_or_create(db, sender_name)
 
-@cli.command()
-@click.argument("mode", type=click.Choice(["westpac"]))
-@click.argument("csvfile", type=click.File())
-@click.option("--create-account", is_flag=True)
-def load_csv(mode: str, csvfile: File, create_account):
-    click.echo("Loading transactions from csv...")
-    if mode == "westpac":
-        click.echo(
-            controller.load_transactions(
-                csvfile,
-                WestpacParser(),
-                create_account=create_account,
+            reciever = None
+            if reciever_name:
+                reciever = self.account_repo.get_by_name(db, reciever_name)
+            elif reciever_name and create_account:
+                reciever = self.account_repo.get_or_create(db, reciever_name)
+
+            err_message = "Error creating transaction due to no account named {}."
+            if not sender:
+                return err_message.format(sender_name)
+            if not reciever:
+                return err_message.format(reciever_name)
+
+            transaction = repos.transaction.insert(
+                db, Transaction(transaction_date=transaction_date, memo=memo)
             )
-        )
+            self.entry_repo.insert(
+                db,
+                Entry(
+                    account=sender,
+                    transaction=transaction,
+                    type=EntryType.DEBIT,
+                    amount=amount,
+                ),
+            )
+            self.entry_repo.insert(
+                db,
+                Entry(
+                    account=reciever,
+                    transaction=transaction,
+                    type=EntryType.CREDIT,
+                    amount=amount,
+                ),
+            )
+            return f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
+
+    def load_transactions(
+        self,
+        csvfile,
+        parser: TransactionParser,
+        create_account: bool,
+    ):
+        resp = list()
+        for transaction in parser.parse(csvfile):
+            resp.append(
+                self.create_transaction(
+                    sender_name=transaction.sender,
+                    reciever_name=transaction.receiver,
+                    amount=float(transaction.amount),
+                    memo=transaction.memo,
+                    transaction_date=transaction.transaction_date,
+                    create_account=create_account,
+                )
+            )
+        return "\n".join(resp)
