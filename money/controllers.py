@@ -3,7 +3,7 @@ from datetime import date
 
 from sqlalchemy.exc import IntegrityError
 from money import repos
-from money.constant import UNCATEGORIZED_ACCOUNT
+from money.db.session import SessionLocal
 from money.parser import TransactionParser
 
 from . import repos
@@ -15,6 +15,7 @@ class MoneyController:
         self.account_repo = repos.account
         self.transaction_repo = repos.transaction
         self.entry_repo = repos.entry
+        self.session_factory = SessionLocal
 
     def create_account(self, name: str) -> str:
         """Create account
@@ -26,8 +27,9 @@ class MoneyController:
             str: Message
         """
         try:
-            account = repos.account.insert(Account(name=name))
-            return f"Created account: {account.name}"
+            with self.session_factory() as db:
+                account = repos.account.insert(db, Account(name=name))
+                return f"Created account: {account.name}"
         except IntegrityError:
             return f"Failed to create account: {name}"
 
@@ -40,54 +42,60 @@ class MoneyController:
         Returns:
             str: Message
         """
-        account = self.account_repo.get_by_name(name)
-        return f"Account:\n\tname:\t{account.name}\n\tbudget:\t{account.budget}\n"
+        with self.session_factory() as db:
+            account = self.account_repo.get_by_name(db, name)
+            return f"Account:\n\tname:\t{account.name}\n\tbudget:\t{account.budget}\n"
 
     def create_transaction(
         self,
-        sender_name: str,
-        reciever_name: str,
         amount: float,
+        sender_name: str = None,
+        reciever_name: str = None,
         memo: str = None,
         transaction_date: date = None,
-        create_account=False,
+        create_account: bool = False,
     ) -> str:
-        sender = self.account_repo.get_by_name(sender_name)
-        reciever = self.account_repo.get_by_name(reciever_name)
+        with self.session_factory() as db:
+            sender = None
+            if sender_name:
+                sender = self.account_repo.get_by_name(db, sender_name)
+            elif sender_name and create_account:
+                sender = self.account_repo.get_or_create(db, sender_name)
 
-        if not sender and create_account:
-            sender = self.account_repo.insert(Account(name=sender_name))
-        if not reciever and create_account:
-            reciever_name = self.account_repo.insert(Account(name=reciever_name))
+            reciever = None
+            if reciever_name:
+                reciever = self.account_repo.get_by_name(db, reciever_name)
+            elif reciever_name and create_account:
+                reciever = self.account_repo.get_or_create(db, reciever_name)
 
-        err_message = "Error creating transaction due to no account named {}."
-        if not sender:
-            return err_message.format(sender_name)
-        if not reciever:
-            return err_message.format(reciever_name)
+            err_message = "Error creating transaction due to no account named {}."
+            if not sender:
+                return err_message.format(sender_name)
+            if not reciever:
+                return err_message.format(reciever_name)
 
-        transaction = repos.transaction.insert(
-            Transaction(transaction_date=transaction_date, memo=memo)
-        )
-        self.entry_repo.insert(
-            Entry(
-                account=sender,
-                transaction=transaction,
-                type=EntryType.DEBIT,
-                amount=amount,
-            ),
-        )
-        self.entry_repo.insert(
-            Entry(
-                account=reciever,
-                transaction=transaction,
-                type=EntryType.CREDIT,
-                amount=amount,
-            ),
-        )
-        return (
-            f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
-        )
+            transaction = repos.transaction.insert(
+                db, Transaction(transaction_date=transaction_date, memo=memo)
+            )
+            self.entry_repo.insert(
+                db,
+                Entry(
+                    account=sender,
+                    transaction=transaction,
+                    type=EntryType.DEBIT,
+                    amount=amount,
+                ),
+            )
+            self.entry_repo.insert(
+                db,
+                Entry(
+                    account=reciever,
+                    transaction=transaction,
+                    type=EntryType.CREDIT,
+                    amount=amount,
+                ),
+            )
+            return f"Added ${amount:.2f} from {sender_name.upper()} to {reciever_name.upper()}"
 
     def load_transactions(
         self,
