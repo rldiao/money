@@ -9,7 +9,7 @@ class WestpacParser(TransactionParser):
     @staticmethod
     def parse(csvfile) -> List[ParsedTransaction]:
         """Parse westpac csv export"""
-        parsed = list()
+        parsed = []
         reader = csv.DictReader(csvfile)
         for row in reader:
             account = row["Bank Account"]

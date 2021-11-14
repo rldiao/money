@@ -1,11 +1,14 @@
+import csv
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.orm.session import Session, sessionmaker
 
 from money.models import Account, Entry, EntryType, Transaction
-from money.queries import getAccountByName
+from money.parser.transaction import ParsedTransaction
+from money.parser.westpac import WestpacParser
+from money.queries import getAccountByName, getUnbalancedTransactions
 
 
 class AccountNotFound(Exception):
@@ -31,7 +34,7 @@ class MoneyApp:
         with self.sessionmaker() as session:
             return session.execute(getAccountByName(name)).scalar()
 
-    def add_transaction(
+    def create_transaction(
         self,
         sender_name: str,
         reciever_name: str,
@@ -39,7 +42,7 @@ class MoneyApp:
         transaction_date: date = None,
         memo: str = None,
     ):
-        """Add transaction and its related entries for each account
+        """Create transaction and its related entries for each account
 
         Args:
             sender_name (str): Sender account name
@@ -52,13 +55,11 @@ class MoneyApp:
             AccountNotFound: Sender or reciever account does not exist
         """
         with self.sessionmaker() as session:
-            try:
-                sender = session.execute(getAccountByName(sender_name)).scalar_one()
-            except NoResultFound:
+            sender = session.execute(getAccountByName(sender_name)).scalar()
+            reciever = session.execute(getAccountByName(reciever_name)).scalar()
+            if sender is None:
                 raise AccountNotFound(sender_name)
-            try:
-                reciever = session.execute(getAccountByName(reciever_name)).scalar_one()
-            except NoResultFound:
+            if reciever is None:
                 raise AccountNotFound(reciever_name)
             entries = [
                 Entry(account=sender, type=EntryType.DEBIT, amount=amount),
@@ -71,3 +72,56 @@ class MoneyApp:
             )
             session.add(transaction)
             session.commit()
+
+    def load_csv(self, file):
+        with self.sessionmaker() as session:
+            self._create_from_parsed(session, WestpacParser.parse(file))
+            session.commit()
+
+    def get_unbalanced_transactions(self):
+        with self.sessionmaker() as session:
+            return session.execute(getUnbalancedTransactions()).all()
+
+    def _create_from_parsed(
+        self,
+        session: Session,
+        transactions: List[ParsedTransaction],
+    ):
+        """Create transaction from ParsedTransaction"""
+        for transaction in transactions:
+            entries = []
+            sender = None
+            if transaction.sender:
+                sender = session.execute(getAccountByName(transaction.sender)).scalar()
+                if sender is None:
+                    sender = Account(name=transaction.sender)
+                entries.append(
+                    Entry(
+                        account=sender,
+                        type=EntryType.DEBIT,
+                        amount=transaction.amount,
+                    )
+                )
+
+            reciever = None
+            if transaction.receiver:
+                reciever = session.execute(
+                    getAccountByName(transaction.receiver)
+                ).scalar()
+                if reciever is None:
+                    reciever = Account(name=transaction.receiver)
+                entries.append(
+                    Entry(
+                        account=reciever,
+                        type=EntryType.CREDIT,
+                        amount=transaction.amount,
+                    )
+                )
+
+            session.add(
+                Transaction(
+                    transaction_date=transaction.transaction_date,
+                    memo=transaction.memo,
+                    entries=entries,
+                )
+            )

@@ -20,5 +20,6 @@ class ParsedTransaction:
 
 
 class TransactionParser(Protocol):
-    def parse(self) -> List[ParsedTransaction]:
+    @staticmethod
+    def parse() -> List[ParsedTransaction]:
         ...

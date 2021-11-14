@@ -40,10 +40,24 @@ def get_account(name: str):
 @click.argument("amount", type=FLOAT)
 def add_transaction(sender: str, reciever: str, amount: float):
     try:
-        _app.add_transaction(
+        _app.create_transaction(
             sender_name=sender,
             reciever_name=reciever,
             amount=amount,
         )
     except AccountNotFound as e:
         click.echo(f'Account "{e.account_name}" does not exist!')
+
+
+@money.command()
+@click.argument("csvfile", type=click.File())
+def load_csv(csvfile):
+    _app.load_csv(csvfile)
+
+
+@money.command()
+def list_unbalanced_transactions():
+    output = "Transactions:\n"
+    for transaction in _app.get_unbalanced_transactions():
+        output += f"\t{transaction[0]}: Missing ${transaction[1]}\n"
+    click.echo(output)
