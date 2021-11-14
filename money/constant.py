@@ -1,1 +1,0 @@
-UNCATEGORIZED_ACCOUNT = "uncategorized"

@@ -1,7 +1,6 @@
 import csv
 from datetime import datetime
 from typing import List
-from money.constant import UNCATEGORIZED_ACCOUNT
 
 from money.parser import ParsedTransaction, TransactionParser
 
@@ -16,8 +15,8 @@ class WestpacParser(TransactionParser):
             account = row["Bank Account"]
             debit = row["Debit Amount"]
             credit = row["Credit Amount"]
-            sender = UNCATEGORIZED_ACCOUNT
-            reciever = UNCATEGORIZED_ACCOUNT
+            sender = None
+            reciever = None
             if debit:
                 amount = debit
                 sender = account

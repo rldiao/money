@@ -5,4 +5,4 @@ DB_URL = "sqlite:///money.db"
 
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
 
-SessionLocal = sessionmaker(bind=engine)
+Session = sessionmaker(bind=engine)

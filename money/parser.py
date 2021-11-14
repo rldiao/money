@@ -1,24 +1,22 @@
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional, Protocol
-
-from money.constant import UNCATEGORIZED_ACCOUNT
+from typing import List, Protocol
 
 
 @dataclass
 class ParsedTransaction:
     """
     This class exists because we may want to customise the logic that
-    determines account logic before creating a Transaction model
+    determines account logic before creating the SQLAchlemy Transaction model
     """
 
     transaction_date: date
-    memo: str
     amount: float
+    memo: str = None
     # Sender account is debited amount
-    sender: str
+    sender: str = None
     # Reciever account is credited amount
-    receiver: str = UNCATEGORIZED_ACCOUNT
+    receiver: str = None
 
 
 class TransactionParser(Protocol):
