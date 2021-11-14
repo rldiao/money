@@ -18,6 +18,9 @@ class Account(Base):
         "Entry", cascade="all, delete-orphan", back_populates="account"
     )
 
+    def __str__(self) -> str:
+        return f"Account(name={self.name}, budget={self.budget})"
+
 
 class EntryType(enum.Enum):
     CREDIT = enum.auto()
