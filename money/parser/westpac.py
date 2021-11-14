@@ -2,7 +2,7 @@ import csv
 from datetime import datetime
 from typing import List
 
-from money.parser import ParsedTransaction, TransactionParser
+from money.parser.transaction import ParsedTransaction, TransactionParser
 
 
 class WestpacParser(TransactionParser):
