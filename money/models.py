@@ -21,6 +21,9 @@ class Account(Base):
     def __str__(self) -> str:
         return f"Account(name={self.name}, budget={self.budget})"
 
+    def __repr__(self) -> str:
+        return f"Account(id={self.id}, name={self.name}, budget={self.budget})"
+
 
 class EntryType(enum.Enum):
     CREDIT = enum.auto()
@@ -37,6 +40,12 @@ class Entry(Base):
     transaction = relationship("Transaction", back_populates="entries")
     account = relationship("Account", back_populates="entries")
 
+    def __repr__(self) -> str:
+        return (
+            f"Entry(id={self.id}, accound_id={self.account_id},"
+            f"transaction_id={self.transaction_id}, type={self.type}, amount={self.amount})"
+        )
+
 
 class Transaction(Base):
     id = Column(Integer, primary_key=True)
@@ -44,3 +53,6 @@ class Transaction(Base):
     memo = Column(String, nullable=True)
 
     entries = relationship("Entry", back_populates="transaction")
+
+    def __repr__(self) -> str:
+        return f"Transaction(id={self.id}, transaction_date={self.transaction_date})"
